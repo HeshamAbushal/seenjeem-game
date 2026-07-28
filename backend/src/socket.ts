@@ -71,6 +71,15 @@ export function setupSockets(io: Server) {
       sendStateUpdate(roomId);
     });
 
+    // Set Game Mode (Lobby)
+    socket.on('set_game_mode', (data: { roomId: string; gameMode: 'MULTIPLE_CHOICE' | 'OPEN_QUESTION' }) => {
+      const state = rooms.get(data.roomId);
+      if (state && state.stage === GameStage.LOBBY) {
+        state.gameMode = data.gameMode;
+        sendStateUpdate(data.roomId);
+      }
+    });
+
     // Start Game
     socket.on('start_game', (data: { roomId: string }) => {
       const state = rooms.get(data.roomId);
@@ -78,6 +87,44 @@ export function setupSockets(io: Server) {
         state.stage = GameStage.BOARD;
         sendStateUpdate(data.roomId);
       }
+    });
+
+    // Host Reveals Open Answer (OPEN_QUESTION mode)
+    socket.on('reveal_open_answer', (data: { roomId: string }) => {
+      const state = rooms.get(data.roomId);
+      if (state && state.activeQuestionId) {
+        state.isOpenAnswerRevealed = true;
+        sendStateUpdate(data.roomId);
+      }
+    });
+
+    // Host Judges Answer (OPEN_QUESTION mode)
+    socket.on('host_judge_answer', (data: { roomId: string; outcome: 'team_1' | 'team_2' | 'none' }) => {
+      const { roomId, outcome } = data;
+      const state = rooms.get(roomId);
+      if (!state || !state.activeQuestionId) return;
+
+      const question = state.questions[state.activeQuestionId];
+      if (!question) return;
+
+      clearRoomTimer(roomId);
+      question.played = true;
+      state.isOpenAnswerRevealed = false;
+
+      if (outcome === 'team_1' || outcome === 'team_2') {
+        state.teams[outcome].score += question.points;
+        state.selectingTeamId = outcome;
+        state.buzzedTeamId = outcome;
+      } else {
+        // No one answered correctly -> switch selector to other team
+        const currentSelector = state.selectingTeamId;
+        state.selectingTeamId = currentSelector === 'team_1' ? 'team_2' : 'team_1';
+        state.buzzedTeamId = null;
+      }
+
+      state.stage = GameStage.ANSWER_REVEAL;
+      sendStateUpdate(roomId);
+      scheduleBoardReturn(roomId);
     });
 
     // Select Question
@@ -92,40 +139,50 @@ export function setupSockets(io: Server) {
       clearRoomTimer(roomId);
 
       state.activeQuestionId = questionId;
-      state.stage = GameStage.QUESTION_ACTIVE;
-      state.buzzedTeamId = null;
-      state.buzzTimeRemaining = 20; // 20 seconds to buzz
+      state.isStealTurn = false;
+      state.isOpenAnswerRevealed = false;
 
-      sendStateUpdate(roomId);
+      if (state.gameMode === 'OPEN_QUESTION') {
+        state.stage = GameStage.BUZZED_IN;
+        state.buzzedTeamId = null;
+        state.answerTimeRemaining = null;
+        sendStateUpdate(roomId);
+      } else {
+        state.stage = GameStage.QUESTION_ACTIVE;
+        state.buzzedTeamId = null;
+        state.buzzTimeRemaining = 20; // 20 seconds to buzz
 
-      // Start buzz countdown timer
-      const interval = setInterval(() => {
-        const current = rooms.get(roomId);
-        if (!current || current.stage !== GameStage.QUESTION_ACTIVE) {
-          clearRoomTimer(roomId);
-          return;
-        }
+        sendStateUpdate(roomId);
 
-        current.buzzTimeRemaining -= 1;
-        io.to(roomId).emit('timer_tick', { timerType: 'BUZZ', secondsRemaining: current.buzzTimeRemaining });
+        // Start buzz countdown timer
+        const interval = setInterval(() => {
+          const current = rooms.get(roomId);
+          if (!current || current.stage !== GameStage.QUESTION_ACTIVE) {
+            clearRoomTimer(roomId);
+            return;
+          }
 
-        if (current.buzzTimeRemaining <= 0) {
-          clearRoomTimer(roomId);
-          // Auto reveal question as played with no winner, go back to board after a short delay
-          question.played = true;
-          current.stage = GameStage.ANSWER_REVEAL;
-          current.activeQuestionId = questionId;
-          sendStateUpdate(roomId);
+          current.buzzTimeRemaining -= 1;
+          io.to(roomId).emit('timer_tick', { timerType: 'BUZZ', secondsRemaining: current.buzzTimeRemaining });
 
-          setTimeout(() => {
-            current.stage = GameStage.BOARD;
-            current.activeQuestionId = null;
+          if (current.buzzTimeRemaining <= 0) {
+            clearRoomTimer(roomId);
+            // Auto reveal question as played with no winner, go back to board after a short delay
+            question.played = true;
+            current.stage = GameStage.ANSWER_REVEAL;
+            current.activeQuestionId = questionId;
             sendStateUpdate(roomId);
-          }, 3000);
-        }
-      }, 1000);
 
-      activeTimers.set(roomId, interval);
+            setTimeout(() => {
+              current.stage = GameStage.BOARD;
+              current.activeQuestionId = null;
+              sendStateUpdate(roomId);
+            }, 3000);
+          }
+        }, 1000);
+
+        activeTimers.set(roomId, interval);
+      }
     });
 
     // Buzz in
@@ -138,11 +195,12 @@ export function setupSockets(io: Server) {
       clearRoomTimer(roomId);
       state.stage = GameStage.BUZZED_IN;
       state.buzzedTeamId = teamId;
-      state.answerTimeRemaining = 12; // 12 seconds to answer
+      state.isStealTurn = false;
+      state.answerTimeRemaining = 12; // 12 seconds for the first team to answer
 
       sendStateUpdate(roomId);
 
-      // Start answer countdown timer
+      // Start answer countdown timer for first attempt
       const interval = setInterval(() => {
         const current = rooms.get(roomId);
         if (!current || current.stage !== GameStage.BUZZED_IN) {
@@ -150,13 +208,15 @@ export function setupSockets(io: Server) {
           return;
         }
 
-        current.answerTimeRemaining -= 1;
-        io.to(roomId).emit('timer_tick', { timerType: 'ANSWER', secondsRemaining: current.answerTimeRemaining });
+        if (current.answerTimeRemaining !== null && current.answerTimeRemaining > 0) {
+          current.answerTimeRemaining -= 1;
+          io.to(roomId).emit('timer_tick', { timerType: 'ANSWER', secondsRemaining: current.answerTimeRemaining });
 
-        if (current.answerTimeRemaining <= 0) {
-          clearRoomTimer(roomId);
-          // Treat as incorrect answer due to timeout
-          handleAnswer(roomId, teamId, -1);
+          if (current.answerTimeRemaining <= 0) {
+            clearRoomTimer(roomId);
+            // Treat as incorrect answer due to timeout -> Steal turn to other team with NO time limit!
+            handleAnswer(roomId, teamId, -1);
+          }
         }
       }, 1000);
 
@@ -182,34 +242,55 @@ export function setupSockets(io: Server) {
       if (!question) return;
 
       const isCorrect = answerIndex === question.correctOptionIndex;
-      question.played = true;
 
-      // Scoring
-      if (isCorrect) {
-        state.teams[teamId].score += question.points;
-        // The team that got it correct gets to select next
-        state.selectingTeamId = teamId;
+      // FIRST ATTEMPT (Buzzed team's turn with 12s timer)
+      if (!state.isStealTurn) {
+        if (isCorrect) {
+          // Correct answer -> add points, set selector, reveal
+          question.played = true;
+          state.teams[teamId].score += question.points;
+          state.selectingTeamId = teamId;
+          state.isStealTurn = false;
+          state.stage = GameStage.ANSWER_REVEAL;
+          sendStateUpdate(roomId);
+          scheduleBoardReturn(roomId);
+        } else {
+          // Wrong answer or Timeout -> Pass question to other team with NO TIME LIMIT!
+          state.teams[teamId].score = Math.max(0, state.teams[teamId].score - question.points);
+          const otherTeamId: 'team_1' | 'team_2' = teamId === 'team_1' ? 'team_2' : 'team_1';
+          state.buzzedTeamId = otherTeamId;
+          state.isStealTurn = true;
+          state.answerTimeRemaining = null; // Unlimited time!
+          clearRoomTimer(roomId);
+          sendStateUpdate(roomId);
+        }
       } else {
-        // Deduct points
-        state.teams[teamId].score = Math.max(0, state.teams[teamId].score - question.points);
-        // Switch selector to the other team
-        state.selectingTeamId = teamId === 'team_1' ? 'team_2' : 'team_1';
+        // SECOND ATTEMPT (Stolen turn with NO time limit)
+        question.played = true;
+        state.isStealTurn = false;
+        if (isCorrect) {
+          state.teams[teamId].score += question.points;
+          state.selectingTeamId = teamId;
+        } else {
+          state.teams[teamId].score = Math.max(0, state.teams[teamId].score - question.points);
+          state.selectingTeamId = teamId === 'team_1' ? 'team_2' : 'team_1';
+        }
+
+        state.stage = GameStage.ANSWER_REVEAL;
+        sendStateUpdate(roomId);
+        scheduleBoardReturn(roomId);
       }
+    }
 
-      state.stage = GameStage.ANSWER_REVEAL;
-      sendStateUpdate(roomId);
-
-      // After 5 seconds, transition back to board or game over
+    function scheduleBoardReturn(roomId: string) {
       setTimeout(() => {
         const current = rooms.get(roomId);
         if (!current) return;
 
-        // Check if all questions have been played
         const allPlayed = Object.values(current.questions).every((q: Question) => q.played);
-        
+
         if (allPlayed) {
           current.stage = GameStage.GAME_OVER;
-          
           const score1 = current.teams.team_1.score;
           const score2 = current.teams.team_2.score;
           if (score1 > score2) {
@@ -217,12 +298,13 @@ export function setupSockets(io: Server) {
           } else if (score2 > score1) {
             current.winnerTeamId = 'team_2';
           } else {
-            current.winnerTeamId = null; // Draw
+            current.winnerTeamId = null;
           }
         } else {
           current.stage = GameStage.BOARD;
           current.activeQuestionId = null;
           current.buzzedTeamId = null;
+          current.isStealTurn = false;
         }
 
         sendStateUpdate(roomId);

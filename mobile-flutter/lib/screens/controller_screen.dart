@@ -73,23 +73,24 @@ class ControllerScreen extends StatelessWidget {
       final buzzedTeamId = state['buzzedTeamId'];
       final isMyBuzz = buzzedTeamId == myTeamId;
       final buzzedTeamName = state['teams'][buzzedTeamId]['name'];
+      final isSteal = state['isStealTurn'] == true;
 
       if (!isMyBuzz) {
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.lock_clock, size: 80, color: Colors.amber),
+              Icon(isSteal ? Icons.swap_horiz : Icons.lock_clock, size: 80, color: Colors.amber),
               const SizedBox(height: 20),
               Text(
-                'الفرصة عند: $buzzedTeamName',
+                isSteal ? 'السؤال تحول لـ: $buzzedTeamName' : 'الفرصة عند: $buzzedTeamName',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'تم قفل الجرس عليك مؤقتاً',
-                style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontSize: 16),
+              Text(
+                isSteal ? 'الفرصة المرتدة بدون وقت محدد' : 'تم قفل الجرس عليك مؤقتاً',
+                style: const TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontSize: 16),
               ),
             ],
           ),
@@ -109,19 +110,31 @@ class ControllerScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFF160E2E),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                border: Border.all(color: isSteal ? Colors.blue : Colors.amber.withOpacity(0.3), width: isSteal ? 2 : 1),
               ),
-              child: Text(
-                activeQuestion['questionText'],
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              child: Column(
+                children: [
+                  if (isSteal)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 6),
+                      child: Text(
+                        '⚡ فرصة مرتدة - بدون وقت محدد!',
+                        style: TextStyle(fontFamily: 'Cairo', color: Colors.blue, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ),
+                  Text(
+                    activeQuestion['questionText'],
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'اختر الإجابة الصحيحة بالهاتف:',
+            Text(
+              isSteal ? '🔥 لديك الوقت الكافي للتفكير.. اختر الإجابة:' : 'اختر الإجابة الصحيحة بالهاتف:',
               textAlign: TextAlign.center,
-              style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontSize: 14),
+              style: TextStyle(fontFamily: 'Cairo', color: isSteal ? Colors.blue : Colors.grey, fontSize: 14, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             Expanded(

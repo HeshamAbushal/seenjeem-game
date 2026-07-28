@@ -24,8 +24,11 @@ export interface Question {
   played: boolean;
 }
 
+export type GameMode = 'MULTIPLE_CHOICE' | 'OPEN_QUESTION';
+
 export interface GameState {
   roomId: string;
+  gameMode: GameMode;
   stage: GameStage;
   teams: {
     team_1: Team;
@@ -37,7 +40,9 @@ export interface GameState {
   selectingTeamId: 'team_1' | 'team_2';
   buzzedTeamId: 'team_1' | 'team_2' | null;
   buzzTimeRemaining: number;
-  answerTimeRemaining: number;
+  answerTimeRemaining: number | null;
+  isStealTurn: boolean;
+  isOpenAnswerRevealed?: boolean;
   winnerTeamId: 'team_1' | 'team_2' | null;
 }
 
@@ -46,7 +51,7 @@ const MOCK_CATEGORIES = [
   'فلوقات أبو سعيد',
   'كود وببجي وشلة الألعاب',
   'تحديات الأكل والعقابات',
-  'أسرار وغرفة المونتاج',
+  'معلومات عامة وثقافة',
   'مقولات أبو سعيد الخالدة',
   'أسئلة شاطحة وسريعة'
 ];
@@ -98,6 +103,7 @@ export function createInitialState(roomId: string): GameState {
 
   return {
     roomId,
+    gameMode: 'MULTIPLE_CHOICE',
     stage: GameStage.LOBBY,
     teams: {
       team_1: { id: 'team_1', name: 'شقردية أبو سعيد', leaderSocketId: null, score: 0 },
@@ -109,7 +115,9 @@ export function createInitialState(roomId: string): GameState {
     selectingTeamId: 'team_1',
     buzzedTeamId: null,
     buzzTimeRemaining: 20,
-    answerTimeRemaining: 10,
+    answerTimeRemaining: 12,
+    isStealTurn: false,
+    isOpenAnswerRevealed: false,
     winnerTeamId: null
   };
 }
@@ -140,13 +148,13 @@ function getQuestionText(catIdx: number, points: number, qNum: number): string {
     '2_30_1': 'ما هو اسم المطعم الشعبي الذي زاره أبو سعيد وتحدى صاحبه في سرعة الطبخ؟',
     '2_30_2': 'كم كانت قيمة الفاتورة الإجمالية في أضخم تحدي أكل بحري صوره الكرو؟',
 
-    // Category 3: أسرار وغرفة المونتاج
-    '3_10_1': 'ما هو البرنامج الأساسي الذي يستخدمه مونتير أبو سعيد لتعديل الفلوقات؟',
-    '3_10_2': 'في أي ساعة من الليل يتم غالباً رفع مقاطع أبو سعيد على اليوتيوب؟',
-    '3_20_1': 'ما هو الصوت الشهير الذي يضعه المونتير عند حدوث لقطة محرجة لأبو سعيد؟',
-    '3_20_2': 'كم يستغرق مونتاج مقطع التحديات في المتوسط حسب تصريح أبو سعيد؟',
-    '3_30_1': 'ما هي كلمة السر التي يقولها أبو سعيد للمونتير لحذف لقطة شاطحة؟',
-    '3_30_2': 'ما هو اسم أول كاميرا استخدمها أبو سعيد لبدء قناته على اليوتيوب؟',
+    // Category 3: معلومات عامة وثقافة
+    '3_10_1': 'ما هو أكبر كوكب في المجموعة الشمسية؟',
+    '3_10_2': 'كم عدد قارات كوكب الأرض؟',
+    '3_20_1': 'ما هي عاصمة المملكة العربية السعودية؟',
+    '3_20_2': 'ما هو أطول نهر في العالم؟',
+    '3_30_1': 'ما هي أكبر دولة في العالم من حيث المساحة؟',
+    '3_30_2': 'كم عدد أضلاع الهرم الخماسي في علم الهندسة؟',
 
     // Category 4: مقولات أبو سعيد الخالدة
     '4_10_1': 'أكمل الجملة الشهيرة لأبو سعيد: "يا ولد.. الجو اليوم يحتاج..."؟',
@@ -195,12 +203,6 @@ function getOptions(catIdx: number, points: number, qNum: number): string[] {
     '2_30_1': ['مطعم الكرم البخاري', 'شواية الخليج', 'مطعم أبو علي للمطبق', 'فول الغامدي'],
     '2_30_2': ['4500 ريال', '1200 ريال', '800 ريال', '10000 ريال'],
 
-    // Category 3: أسرار وغرفة المونتاج
-    '3_10_1': ['Adobe Premiere Pro', 'Final Cut Pro', 'DaVinci Resolve', 'CapCut'],
-    '3_10_2': ['الساعة 8 مساءً بتوقيت مكة', 'الساعة 4 عصراً', 'الساعة 12 منتصف الليل', 'الفجر مباشرة'],
-    '3_20_1': ['تأثير صوت "بوق" حزين', 'ضحكة شريرة بصوت عالي', 'صوت صرصور الليل', 'تأثير الصدمة للمسلسلات الهندية'],
-    '3_20_2': ['يومين كاملين', 'ساعتين فقط', 'أسبوع كامل', '5 ساعات متواصلة'],
-    '3_30_1': ['"قص يا مدير!"', '"شيل الكيرف"', '"عدل المسار"', '"خلها مستورة"'],
     '3_30_2': ['Canon 80D', 'Sony A7III', 'iPhone 6s', 'GoPro Hero 5'],
 
     // Category 4: مقولات أبو سعيد الخالدة

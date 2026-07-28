@@ -31,6 +31,7 @@ interface Question {
 
 interface GameState {
   roomId: string;
+  gameMode: 'MULTIPLE_CHOICE' | 'OPEN_QUESTION';
   stage: GameStage;
   teams: {
     team_1: Team;
@@ -42,7 +43,9 @@ interface GameState {
   selectingTeamId: 'team_1' | 'team_2';
   buzzedTeamId: 'team_1' | 'team_2' | null;
   buzzTimeRemaining: number;
-  answerTimeRemaining: number;
+  answerTimeRemaining: number | null;
+  isStealTurn?: boolean;
+  isOpenAnswerRevealed?: boolean;
   winnerTeamId: 'team_1' | 'team_2' | null;
 }
 
@@ -324,18 +327,40 @@ function App() {
       );
     }
 
-    // Mobile Stage: Buzzed In (Multiple Choice Answer Selection)
+    // Mobile Stage: Buzzed In (Answer Selection / Open Question)
     if (gameState.stage === GameStage.BUZZED_IN) {
+      if (gameState.gameMode === 'OPEN_QUESTION') {
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', justifyContent: 'center', alignItems: 'center', padding: '30px', gap: '20px', direction: 'rtl' }}>
+            <span style={{ fontSize: '4rem' }}>🗣️</span>
+            <h2 style={{ fontSize: '1.8rem', color: '#f59e0b', textAlign: 'center', fontWeight: 'bold' }}>
+              سؤال مفتوح بدون خيارات!
+            </h2>
+            <p style={{ color: '#fff', fontSize: '1.2rem', textAlign: 'center', lineHeight: '1.6' }}>
+              أجب شفهياً على السؤال بصوت واضح لمدير اللعبة!
+            </p>
+            <div className="glass-panel" style={{ padding: '16px', textAlign: 'center', width: '100%', color: '#a1a1aa' }}>
+              راقب شاشة التلفاز الرئيسية لكشف الإجابة وتقييم النتيجة. 👁️
+            </div>
+          </div>
+        );
+      }
+
       const buzzedTeamId = gameState.buzzedTeamId;
       const isMyBuzz = buzzedTeamId === joinedTeamId;
+      const isSteal = !!gameState.isStealTurn;
+      const buzzedTeamName = buzzedTeamId ? gameState.teams[buzzedTeamId]?.name : '';
 
       if (!isMyBuzz) {
         return (
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', justifyContent: 'center', alignItems: 'center', padding: '30px', gap: '20px', direction: 'rtl' }}>
-            <span style={{ fontSize: '4rem' }}>🔒</span>
-            <h2 style={{ fontSize: '1.6rem', color: '#fff', textAlign: 'center', fontWeight: 'bold' }}>تم قفل الجرس!</h2>
+            <span style={{ fontSize: '4rem' }}>{isSteal ? '🔄' : '🔒'}</span>
+            <h2 style={{ fontSize: '1.6rem', color: isSteal ? '#3b82f6' : '#fff', textAlign: 'center', fontWeight: 'bold' }}>
+              {isSteal ? 'السؤال تحوّل للفريق الآخر!' : 'تم قفل الجرس!'}
+            </h2>
             <p style={{ color: '#a1a1aa', fontSize: '1.1rem', textAlign: 'center' }}>
-              الفرصة للإجابة عند فريق: <strong style={{ color: '#f59e0b' }}>{gameState.teams[buzzedTeamId!].name}</strong>
+              {isSteal ? 'الفرصة المرتدة بدون وقت محدد عند فريق:' : 'الفرصة للإجابة عند فريق:'}{' '}
+              <strong style={{ color: '#f59e0b' }}>{buzzedTeamName}</strong>
             </p>
           </div>
         );
@@ -348,12 +373,19 @@ function App() {
 
       return (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', padding: '20px', gap: '20px', direction: 'rtl' }}>
-          <div className="glass-panel" style={{ padding: '20px', textAlign: 'center' }}>
+          <div className="glass-panel" style={{ padding: '20px', textAlign: 'center', border: isSteal ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.1)' }}>
+            {isSteal && (
+              <div style={{ color: '#3b82f6', fontWeight: 'bold', fontSize: '1rem', marginBottom: '6px' }}>
+                ⚡ فرصة مرتدة - بدون وقت محدد!
+              </div>
+            )}
             <h3 style={{ fontSize: '1.2rem', color: '#f59e0b', marginBottom: '8px' }}>{question.category}</h3>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>{question.questionText}</h2>
           </div>
 
-          <h3 style={{ textAlign: 'center', color: '#a1a1aa', fontSize: '0.9rem' }}>اختر الإجابة الصحيحة الآن:</h3>
+          <h3 style={{ textAlign: 'center', color: isSteal ? '#3b82f6' : '#a1a1aa', fontSize: '0.95rem', fontWeight: 'bold' }}>
+            {isSteal ? '🔥 لديك الوقت الكافي للتفكير.. اختر الإجابة الصحيحة:' : 'اختر الإجابة الصحيحة الآن:'}
+          </h3>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
             {question.options.map((opt, idx) => {
@@ -443,7 +475,7 @@ function App() {
   const renderLobby = () => {
     // Detect if running on localhost and fallback to local LAN IP for mobile scanning
     const hostIp = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? '172.21.4.79' 
+      ? '192.168.100.157' 
       : window.location.hostname;
     
     const joinUrl = `${window.location.protocol}//${hostIp}:${window.location.port}/?room=${gameState.roomId}&join=true`;
@@ -482,40 +514,71 @@ function App() {
         {/* Right Side: Team Setup */}
         <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '40px', gap: '30px', height: '80%', justifyContent: 'space-between' }}>
           <div>
-            <h1 className="title-main" style={{ textAlign: 'center', marginBottom: '20px' }}>تحدي سين جيم</h1>
-            <p style={{ textAlign: 'center', color: '#a1a1aa', fontSize: '1.2rem', marginBottom: '40px' }}>
-              بانتظار قادة الفرق للدخول إلى الحلبة!
+            <h1 className="title-main" style={{ textAlign: 'center', marginBottom: '20px' }}>تحدي سين جيم - أبو سعيد</h1>
+            <p style={{ textAlign: 'center', color: '#fff', fontSize: '1.2rem', marginBottom: '30px', fontWeight: 'bold' }}>
+              بانتظار قادة الفرق للدخول إلى الحلبة! 🍊
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* Team 1 Card */}
               <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderRadius: '12px',
-                background: t1Connected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${t1Connected ? '#10b981' : 'rgba(255,255,255,0.1)'}`
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderRadius: '14px',
+                background: t1Connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)',
+                border: `1.5px solid ${t1Connected ? '#10b981' : 'rgba(255, 107, 0, 0.3)'}`
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3b82f6' }}>{gameState.teams.team_1.name}</span>
-                  <span style={{ color: t1Connected ? '#10b981' : '#ef4444', fontSize: '0.9rem' }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff6b00' }}>{gameState.teams.team_1.name}</span>
+                  <span style={{ color: t1Connected ? '#10b981' : '#ef4444', fontSize: '0.95rem', fontWeight: 'bold' }}>
                     {t1Connected ? 'قائد الفريق متصل ✓' : 'بانتظار قائد الفريق...'}
                   </span>
                 </div>
-                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: t1Connected ? '#10b981' : '#ef4444' }}></div>
+                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t1Connected ? '#10b981' : '#ef4444', boxShadow: t1Connected ? '0 0 10px #10b981' : 'none' }}></div>
               </div>
 
               {/* Team 2 Card */}
               <div style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderRadius: '12px',
-                background: t2Connected ? 'rgba(16, 185, 129, 0.1)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${t2Connected ? '#10b981' : 'rgba(255,255,255,0.1)'}`
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', borderRadius: '14px',
+                background: t2Connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)',
+                border: `1.5px solid ${t2Connected ? '#10b981' : 'rgba(255, 107, 0, 0.3)'}`
               }}>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#f59e0b' }}>{gameState.teams.team_2.name}</span>
-                  <span style={{ color: t2Connected ? '#10b981' : '#ef4444', fontSize: '0.9rem' }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff' }}>{gameState.teams.team_2.name}</span>
+                  <span style={{ color: t2Connected ? '#10b981' : '#ef4444', fontSize: '0.95rem', fontWeight: 'bold' }}>
                     {t2Connected ? 'قائد الفريق متصل ✓' : 'بانتظار قائد الفريق...'}
                   </span>
                 </div>
-                <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: t2Connected ? '#10b981' : '#ef4444' }}></div>
+                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t2Connected ? '#10b981' : '#ef4444', boxShadow: t2Connected ? '0 0 10px #10b981' : 'none' }}></div>
+              </div>
+            </div>
+
+            {/* Game Mode Options */}
+            <div style={{ marginTop: '20px', background: 'rgba(255, 107, 0, 0.08)', padding: '18px', borderRadius: '14px', border: '1.5px solid rgba(255, 107, 0, 0.3)' }}>
+              <div style={{ fontSize: '1.1rem', color: '#ffffff', fontWeight: 'bold', marginBottom: '12px', textAlign: 'center' }}>
+                ⚙️ اختيار نمط اللعب للجولة:
+              </div>
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => socket.emit('set_game_mode', { roomId: gameState.roomId, gameMode: 'MULTIPLE_CHOICE' })}
+                  style={{
+                    flex: 1, padding: '14px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem',
+                    background: (gameState.gameMode || 'MULTIPLE_CHOICE') === 'MULTIPLE_CHOICE' ? '#ff6b00' : 'rgba(255,255,255,0.06)',
+                    color: '#ffffff', border: `1.5px solid ${(gameState.gameMode || 'MULTIPLE_CHOICE') === 'MULTIPLE_CHOICE' ? '#ffffff' : 'transparent'}`,
+                    boxShadow: (gameState.gameMode || 'MULTIPLE_CHOICE') === 'MULTIPLE_CHOICE' ? '0 0 15px rgba(255, 107, 0, 0.5)' : 'none'
+                  }}
+                >
+                  📝 خيارات متعددة
+                </button>
+                <button
+                  onClick={() => socket.emit('set_game_mode', { roomId: gameState.roomId, gameMode: 'OPEN_QUESTION' })}
+                  style={{
+                    flex: 1, padding: '14px', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem',
+                    background: gameState.gameMode === 'OPEN_QUESTION' ? '#ff6b00' : 'rgba(255,255,255,0.06)',
+                    color: '#ffffff', border: `1.5px solid ${gameState.gameMode === 'OPEN_QUESTION' ? '#ffffff' : 'transparent'}`,
+                    boxShadow: gameState.gameMode === 'OPEN_QUESTION' ? '0 0 15px rgba(255, 107, 0, 0.5)' : 'none'
+                  }}
+                >
+                  🗣️ سؤال مفتوح (بدون خيارات)
+                </button>
               </div>
             </div>
           </div>
@@ -524,12 +587,13 @@ function App() {
             onClick={handleStart}
             disabled={!canStart}
             style={{
-              padding: '18px', borderRadius: '12px', fontSize: '1.6rem', fontWeight: 'bold', cursor: canStart ? 'pointer' : 'not-allowed',
-              background: canStart ? 'linear-gradient(90deg, #f59e0b, #3b82f6)' : '#27272a',
-              color: canStart ? '#fff' : '#71717a', border: 'none', transition: 'all 0.3s'
+              padding: '18px', borderRadius: '14px', fontSize: '1.7rem', fontWeight: '900', cursor: canStart ? 'pointer' : 'not-allowed',
+              background: canStart ? 'linear-gradient(90deg, #ff6b00, #ff8533)' : '#27272a',
+              color: canStart ? '#ffffff' : '#71717a', border: 'none', transition: 'all 0.3s',
+              boxShadow: canStart ? '0 8px 25px rgba(255, 107, 0, 0.5)' : 'none'
             }}
           >
-            {canStart ? 'انطلق! ابدأ اللعب' : 'بانتظار قادة الفرق...'}
+            {canStart ? 'انطلق! ابدأ اللعب 🚀' : 'بانتظار قادة الفرق...'}
           </button>
         </div>
       </div>
@@ -548,19 +612,19 @@ function App() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '0 10px' }}>
-          <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '10px 30px', borderRight: '5px solid #3b82f6' }}>
-            <span style={{ fontSize: '1.4rem', color: '#a1a1aa' }}>{gameState.teams.team_1.name}</span>
-            <span className="score-badge" style={{ color: '#3b82f6' }}>{gameState.teams.team_1.score}</span>
+          <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '12px 30px', borderRight: '5px solid #ff6b00' }}>
+            <span style={{ fontSize: '1.4rem', color: '#ffffff', fontWeight: 'bold' }}>{gameState.teams.team_1.name}</span>
+            <span className="score-badge" style={{ color: '#ff6b00' }}>{gameState.teams.team_1.score}</span>
           </div>
 
-          <div className="glass-panel" style={{ padding: '10px 40px', animation: 'pulse-gold 2s infinite', border: '1px solid #f59e0b' }}>
-            <span style={{ fontSize: '1.3rem', color: '#a1a1aa' }}>الدور في الاختيار عند:</span>
-            <span style={{ fontSize: '1.7rem', fontWeight: '900', color: '#f59e0b', marginRight: '10px' }}>{selectingTeam.name}</span>
+          <div className="glass-panel" style={{ padding: '12px 40px', animation: 'pulse-orange 2s infinite', border: '2px solid #ff6b00' }}>
+            <span style={{ fontSize: '1.3rem', color: '#cbd5e1' }}>الدور في الاختيار عند:</span>
+            <span style={{ fontSize: '1.8rem', fontWeight: '900', color: '#ff6b00', marginRight: '10px' }}>{selectingTeam.name}</span>
           </div>
 
-          <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '10px 30px', borderLeft: '5px solid #f59e0b' }}>
-            <span className="score-badge" style={{ color: '#f59e0b' }}>{gameState.teams.team_2.score}</span>
-            <span style={{ fontSize: '1.4rem', color: '#a1a1aa' }}>{gameState.teams.team_2.name}</span>
+          <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '20px', padding: '12px 30px', borderLeft: '5px solid #ffffff' }}>
+            <span className="score-badge" style={{ color: '#ffffff' }}>{gameState.teams.team_2.score}</span>
+            <span style={{ fontSize: '1.4rem', color: '#ffffff', fontWeight: 'bold' }}>{gameState.teams.team_2.name}</span>
           </div>
         </div>
 
@@ -591,13 +655,16 @@ function App() {
     const question = gameState.questions[gameState.activeQuestionId];
     if (!question) return null;
 
-    const seconds = timerInfo ? timerInfo.secondsRemaining : (gameState.stage === GameStage.QUESTION_ACTIVE ? gameState.buzzTimeRemaining : gameState.answerTimeRemaining);
-    const isDanger = seconds <= 5;
+    const isSteal = !!gameState.isStealTurn;
+    const seconds = isSteal 
+      ? null 
+      : (timerInfo ? timerInfo.secondsRemaining : (gameState.stage === GameStage.QUESTION_ACTIVE ? gameState.buzzTimeRemaining : (gameState.answerTimeRemaining ?? 12)));
+    const isDanger = seconds !== null && seconds <= 5;
 
     const buzzedTeam = gameState.buzzedTeamId ? gameState.teams[gameState.buzzedTeamId] : null;
 
     return (
-      <div style={{ display: 'flex', flex: 1, padding: '40px', gap: '30px', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', flex: 1, padding: '30px', gap: '25px', flexDirection: 'column', overflowY: 'auto', paddingBottom: '80px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '15px' }}>
           <div style={{ fontSize: '1.6rem', color: '#f59e0b', fontWeight: 'bold' }}>{question.category}</div>
           <div style={{ fontSize: '2rem', fontWeight: '900', color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', padding: '5px 25px', borderRadius: '30px' }}>
@@ -605,51 +672,119 @@ function App() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', flex: 1, gap: '40px', alignItems: 'center', justifyContent: 'center' }}>
-          <div className="glass-panel" style={{ flex: 2.5, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '40px', minHeight: '300px' }}>
-            <h1 style={{ fontSize: '2.8rem', fontWeight: '900', lineHeight: '1.6', textAlign: 'center' }}>
+        <div style={{ display: 'flex', gap: '30px', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '30px', minHeight: '180px' }}>
+            <h1 style={{ fontSize: '2.4rem', fontWeight: '900', lineHeight: '1.5', textAlign: 'center' }}>
               {question.questionText}
             </h1>
           </div>
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-            <div className={`timer-circle ${isDanger ? 'danger' : ''}`}>
-              {seconds}
+          {gameState.gameMode !== 'OPEN_QUESTION' && (
+            <div style={{ width: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
+              <div className={`timer-circle ${isDanger ? 'danger' : ''}`}>
+                {isSteal ? '∞' : seconds}
+              </div>
+              <div style={{ fontSize: '1.2rem', color: '#a1a1aa', textAlign: 'center' }}>
+                {gameState.stage === GameStage.QUESTION_ACTIVE 
+                  ? 'بانتظار الضغط على الجرس...' 
+                  : (isSteal ? '🔥 فرصة مرتدة - بدون وقت محدد' : 'بانتظار الجواب من القائد...')}
+              </div>
             </div>
-            <div style={{ fontSize: '1.2rem', color: '#a1a1aa' }}>
-              {gameState.stage === GameStage.QUESTION_ACTIVE ? 'بانتظار الضغط على الجرس...' : 'بانتظار الجواب من القائد...'}
-            </div>
-          </div>
+          )}
         </div>
 
-        {gameState.stage === GameStage.BUZZED_IN && buzzedTeam && (
+        {gameState.gameMode !== 'OPEN_QUESTION' && gameState.stage === GameStage.BUZZED_IN && buzzedTeam && (
           <div style={{
-            background: 'rgba(245, 158, 11, 0.25)', border: '2px solid #f59e0b', borderRadius: '12px', padding: '20px',
+            background: isSteal ? 'rgba(59, 130, 246, 0.25)' : 'rgba(245, 158, 11, 0.25)', 
+            border: `2px solid ${isSteal ? '#3b82f6' : '#f59e0b'}`, borderRadius: '12px', padding: '20px',
             textAlign: 'center', fontSize: '2rem', fontWeight: 'bold', animation: 'buzz-flash 1s infinite'
           }}>
-            🔔 {buzzedTeam.name} ضغط أولاً! الإجابة عندهم الآن...
+            {isSteal 
+              ? `🔄 السؤال انتقل لـ (${buzzedTeam.name}) - لا يوجد وقت محدد للإجابة!` 
+              : `🔔 ${buzzedTeam.name} ضغط أولاً! الإجابة عندهم الآن...`}
           </div>
         )}
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          {question.options.map((opt, idx) => {
-            const letter = ['أ', 'ب', 'ج', 'د'][idx];
-            return (
-              <div key={idx} className="glass-panel" style={{
-                display: 'flex', padding: '20px 30px', borderRadius: '12px', alignItems: 'center', gap: '25px',
-                border: '1px solid rgba(255,255,255,0.1)'
-              }}>
-                <div style={{
-                  width: '45px', height: '45px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 'bold'
+        {gameState.gameMode === 'OPEN_QUESTION' ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', alignItems: 'center' }}>
+            {!gameState.isOpenAnswerRevealed ? (
+              <button
+                onClick={() => socket.emit('reveal_open_answer', { roomId: gameState.roomId })}
+                style={{
+                  padding: '20px 40px', borderRadius: '16px', border: 'none', fontSize: '1.6rem', fontWeight: '900',
+                  background: 'linear-gradient(90deg, #f59e0b, #3b82f6)', color: '#fff', cursor: 'pointer',
+                  boxShadow: '0 8px 25px rgba(245, 158, 11, 0.4)'
+                }}
+              >
+                👁️ كشف الإجابة الصحيحة
+              </button>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', alignItems: 'center' }}>
+                <div className="glass-panel" style={{
+                  padding: '20px 40px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)',
+                  border: '2px solid #10b981', textAlign: 'center', width: '100%'
                 }}>
-                  {letter}
+                  <div style={{ fontSize: '1.2rem', color: '#a1a1aa', marginBottom: '6px' }}>الإجابة الصحيحة هي:</div>
+                  <div style={{ fontSize: '2.2rem', fontWeight: '900', color: '#10b981' }}>
+                    {question.options[question.correctOptionIndex]}
+                  </div>
                 </div>
-                <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{opt}</div>
+
+                <div style={{ fontSize: '1.2rem', color: '#f59e0b', fontWeight: 'bold' }}>حدد الفريق الفائز بالنقطة:</div>
+
+                <div style={{ display: 'flex', gap: '20px', width: '100%', justifyContent: 'center' }}>
+                  <button
+                    onClick={() => socket.emit('host_judge_answer', { roomId: gameState.roomId, outcome: 'team_1' })}
+                    style={{
+                      flex: 1, padding: '16px', borderRadius: '12px', border: 'none', fontSize: '1.3rem', fontWeight: 'bold',
+                      background: '#2563eb', color: '#fff', cursor: 'pointer'
+                    }}
+                  >
+                    ✅ إجابة صحيحة: {gameState.teams.team_1.name}
+                  </button>
+                  <button
+                    onClick={() => socket.emit('host_judge_answer', { roomId: gameState.roomId, outcome: 'team_2' })}
+                    style={{
+                      flex: 1, padding: '16px', borderRadius: '12px', border: 'none', fontSize: '1.3rem', fontWeight: 'bold',
+                      background: '#d97706', color: '#fff', cursor: 'pointer'
+                    }}
+                  >
+                    ✅ إجابة صحيحة: {gameState.teams.team_2.name}
+                  </button>
+                  <button
+                    onClick={() => socket.emit('host_judge_answer', { roomId: gameState.roomId, outcome: 'none' })}
+                    style={{
+                      flex: 1, padding: '16px', borderRadius: '12px', border: 'none', fontSize: '1.3rem', fontWeight: 'bold',
+                      background: '#dc2626', color: '#fff', cursor: 'pointer'
+                    }}
+                  >
+                    ❌ لم يجب أحد / إجابة خاطئة
+                  </button>
+                </div>
               </div>
-            );
-          })}
-        </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {question.options.map((opt, idx) => {
+              const letter = ['أ', 'ب', 'ج', 'د'][idx];
+              return (
+                <div key={idx} className="glass-panel" style={{
+                  display: 'flex', padding: '20px 30px', borderRadius: '12px', alignItems: 'center', gap: '25px',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                  <div style={{
+                    width: '45px', height: '45px', borderRadius: '50%', background: 'rgba(255,255,255,0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 'bold'
+                  }}>
+                    {letter}
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 'bold' }}>{opt}</div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     );
   };
@@ -692,28 +827,30 @@ function App() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          {question.options.map((opt, idx) => {
-            const isCorrectOption = idx === question.correctOptionIndex;
-            const letter = ['أ', 'ب', 'ج', 'د'][idx];
-            return (
-              <div key={idx} className="glass-panel" style={{
-                display: 'flex', padding: '20px 30px', borderRadius: '12px', alignItems: 'center', gap: '25px',
-                background: isCorrectOption ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.01)',
-                border: `2px solid ${isCorrectOption ? '#10b981' : 'rgba(255,255,255,0.1)'}`
-              }}>
-                <div style={{
-                  width: '45px', height: '45px', borderRadius: '50%',
-                  background: isCorrectOption ? '#10b981' : 'rgba(255,255,255,0.1)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 'bold'
+        {gameState.gameMode !== 'OPEN_QUESTION' && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            {question.options.map((opt, idx) => {
+              const isCorrectOption = idx === question.correctOptionIndex;
+              const letter = ['أ', 'ب', 'ج', 'د'][idx];
+              return (
+                <div key={idx} className="glass-panel" style={{
+                  display: 'flex', padding: '20px 30px', borderRadius: '12px', alignItems: 'center', gap: '25px',
+                  background: isCorrectOption ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255,255,255,0.01)',
+                  border: `2px solid ${isCorrectOption ? '#10b981' : 'rgba(255,255,255,0.1)'}`
                 }}>
-                  {letter}
+                  <div style={{
+                    width: '45px', height: '45px', borderRadius: '50%',
+                    background: isCorrectOption ? '#10b981' : 'rgba(255,255,255,0.1)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', fontWeight: 'bold'
+                  }}>
+                    {letter}
+                  </div>
+                  <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: isCorrectOption ? '#10b981' : '#fff' }}>{opt}</div>
                 </div>
-                <div style={{ fontSize: '1.8rem', fontWeight: 'bold', color: isCorrectOption ? '#10b981' : '#fff' }}>{opt}</div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
 
         <div style={{ textAlign: 'center', color: '#a1a1aa', fontSize: '1.1rem' }}>
           جاري العودة إلى لوحة الأسئلة تلقائياً بعد قليل...
