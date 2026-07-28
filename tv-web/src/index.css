@@ -1,0 +1,188 @@
+:root {
+  --bg-gradient: linear-gradient(135deg, #0b0813 0%, #160e2e 50%, #0d091a 100%);
+  --gold-primary: #f59e0b;
+  --gold-glow: 0 0 20px rgba(245, 158, 11, 0.4);
+  --blue-primary: #2563eb;
+  --blue-glow: 0 0 20px rgba(37, 99, 235, 0.4);
+  --red-primary: #ef4444;
+  --green-primary: #10b981;
+  --text-white: #ffffff;
+  --text-gray: #a1a1aa;
+  
+  --panel-bg: rgba(22, 17, 43, 0.65);
+  --panel-border: rgba(245, 158, 11, 0.15);
+  --panel-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  
+  font-family: 'Cairo', 'Tajawal', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  background: var(--bg-gradient);
+  color: var(--text-white);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  overflow: hidden; /* Lock viewport for TV presentation */
+  background: var(--bg-gradient);
+  display: flex;
+  flex-direction: column;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Glassmorphic Panel utility */
+.glass-panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  box-shadow: var(--panel-shadow);
+}
+
+/* Custom Animations */
+@keyframes pulse-gold {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 25px rgba(245, 158, 11, 0.6);
+  }
+}
+
+@keyframes pulse-timer {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes buzz-flash {
+  0%, 100% { background-color: rgba(245, 158, 11, 0.1); }
+  50% { background-color: rgba(245, 158, 11, 0.35); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+/* Score updates */
+.score-badge {
+  font-weight: 900;
+  font-size: 2.2rem;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+}
+
+/* TV Board Grid */
+.board-container {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+  padding: 24px;
+  flex: 1;
+}
+
+.category-column {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.category-header {
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 8px;
+  color: var(--gold-primary);
+  border-bottom: 3px solid var(--gold-primary);
+  background: rgba(245, 158, 11, 0.05);
+  border-radius: 8px;
+}
+
+.question-card {
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  font-weight: 900;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.question-card.available {
+  color: var(--text-white);
+  border-color: rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.question-card.available:hover {
+  transform: translateY(-3px);
+  background: var(--blue-primary);
+  border-color: var(--text-white);
+  box-shadow: var(--blue-glow);
+}
+
+.question-card.played {
+  background: rgba(255, 255, 255, 0.01);
+  border-color: transparent;
+  color: rgba(255, 255, 255, 0.1);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+/* Large TV text layout */
+.title-main {
+  font-size: 2.8rem;
+  font-weight: 900;
+  background: linear-gradient(to left, var(--gold-primary), #fff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.timer-circle {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 6px solid var(--gold-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 900;
+  animation: pulse-timer 1s infinite;
+  box-shadow: var(--gold-glow);
+}
+
+.timer-circle.danger {
+  border-color: var(--red-primary);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+}
