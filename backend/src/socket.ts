@@ -122,14 +122,13 @@ export function setupSockets(io: Server) {
 
       if (outcome === 'team_1' || outcome === 'team_2') {
         state.teams[outcome].score += question.points;
-        state.selectingTeamId = outcome;
         state.buzzedTeamId = outcome;
       } else {
-        // No one answered correctly -> switch selector to other team
-        const currentSelector = state.selectingTeamId;
-        state.selectingTeamId = currentSelector === 'team_1' ? 'team_2' : 'team_1';
         state.buzzedTeamId = null;
       }
+
+      // Turn selection strictly alternates to the other team
+      state.selectingTeamId = state.selectingTeamId === 'team_1' ? 'team_2' : 'team_1';
 
       state.stage = GameStage.ANSWER_REVEAL;
       sendStateUpdate(roomId);
@@ -180,6 +179,7 @@ export function setupSockets(io: Server) {
             question.played = true;
             current.stage = GameStage.ANSWER_REVEAL;
             current.activeQuestionId = questionId;
+            current.selectingTeamId = current.selectingTeamId === 'team_1' ? 'team_2' : 'team_1';
             sendStateUpdate(roomId);
 
             setTimeout(() => {
@@ -255,10 +255,10 @@ export function setupSockets(io: Server) {
       // FIRST ATTEMPT (Buzzed team's turn with 12s timer)
       if (!state.isStealTurn) {
         if (isCorrect) {
-          // Correct answer -> add points, set selector, reveal
+          // Correct answer -> add points, alternate selection turn, reveal
           question.played = true;
           state.teams[teamId].score += question.points;
-          state.selectingTeamId = teamId;
+          state.selectingTeamId = state.selectingTeamId === 'team_1' ? 'team_2' : 'team_1';
           state.isStealTurn = false;
           state.stage = GameStage.ANSWER_REVEAL;
           sendStateUpdate(roomId);
@@ -279,11 +279,12 @@ export function setupSockets(io: Server) {
         state.isStealTurn = false;
         if (isCorrect) {
           state.teams[teamId].score += question.points;
-          state.selectingTeamId = teamId;
         } else {
           state.teams[teamId].score = Math.max(0, state.teams[teamId].score - question.points);
-          state.selectingTeamId = teamId === 'team_1' ? 'team_2' : 'team_1';
         }
+
+        // Selection turn strictly alternates to the other team
+        state.selectingTeamId = state.selectingTeamId === 'team_1' ? 'team_2' : 'team_1';
 
         state.stage = GameStage.ANSWER_REVEAL;
         sendStateUpdate(roomId);
