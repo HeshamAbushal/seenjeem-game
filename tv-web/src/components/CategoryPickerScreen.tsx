@@ -30,7 +30,9 @@ export const CategoryPickerScreen: React.FC<CategoryPickerScreenProps> = ({
   };
 
   const handleConfirm = () => {
-    onConfirmCategories(selectedIds);
+    if (selectedIds.length === 6) {
+      onConfirmCategories(selectedIds);
+    }
   };
 
   return (
@@ -198,21 +200,23 @@ export const CategoryPickerScreen: React.FC<CategoryPickerScreenProps> = ({
       <div style={{ display: 'flex', justifyContent: 'center' }}>
         <button
           onClick={handleConfirm}
-          disabled={selectedIds.length === 0}
+          disabled={selectedIds.length !== 6}
           style={{
             padding: '18px 48px',
             borderRadius: '16px',
             border: 'none',
             fontSize: '1.35rem',
             fontWeight: '900',
-            background: selectedIds.length === 0 ? '#27272a' : 'linear-gradient(90deg, #ff6b00, #ff8533)',
-            color: selectedIds.length === 0 ? '#71717a' : '#ffffff',
-            cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer',
-            boxShadow: selectedIds.length === 0 ? 'none' : '0 8px 30px rgba(255, 107, 0, 0.5)',
+            background: selectedIds.length !== 6 ? '#27272a' : 'linear-gradient(90deg, #ff6b00, #ff8533)',
+            color: selectedIds.length !== 6 ? '#71717a' : '#ffffff',
+            cursor: selectedIds.length !== 6 ? 'not-allowed' : 'pointer',
+            boxShadow: selectedIds.length !== 6 ? 'none' : '0 8px 30px rgba(255, 107, 0, 0.5)',
             transition: 'all 0.2s'
           }}
         >
-          {selectedIds.length === 0 ? 'اختر تصنيفاً واحداً على الأقل لبدء اللعبة 🎯' : 'تأكيد التصنيفات وبدء اللعبة 🚀'}
+          {selectedIds.length === 6
+            ? 'تأكيد الـ 6 تصنيفات وبدء اللعبة 🚀'
+            : `الرجاء اختيار 6 تصنيفات بالضبط (المحدد: ${selectedIds.length} من 6) 🎯`}
         </button>
       </div>
     </div>
