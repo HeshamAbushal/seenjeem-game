@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { socket } from './socket';
+import { AuthModal } from './components/AuthModal';
+import { AuthScreen } from './components/AuthScreen';
+import { CategoryPickerScreen } from './components/CategoryPickerScreen';
+import { SavedGamesScreen } from './components/SavedGamesScreen';
 
 // Match backend state interfaces
 enum GameStage {
@@ -54,12 +58,27 @@ function App() {
   const [timerInfo, setTimerInfo] = useState<{ timerType: 'BUZZ' | 'ANSWER'; secondsRemaining: number } | null>(null);
   const [connected, setConnected] = useState(false);
 
-  // Router states
+  // Router & Auth states
   const [isMobileController, setIsMobileController] = useState(false);
   const [roomCodeInput, setRoomCodeInput] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<'team_1' | 'team_2'>('team_1');
   const [joinedTeamId, setJoinedTeamId] = useState<'team_1' | 'team_2' | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Auth User state
+  const [currentUser, setCurrentUser] = useState<{ username: string; email: string; name: string } | null>(() => {
+    try {
+      const saved = localStorage.getItem('seen_jeem_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isGuestMode, setIsGuestMode] = useState(false);
+  const [hasConfirmedCategories, setHasConfirmedCategories] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [isViewingSavedGames, setIsViewingSavedGames] = useState(false);
 
   useEffect(() => {
     // Detect if page is opened as mobile controller via url parameters
@@ -143,7 +162,7 @@ function App() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', justifyContent: 'center', alignItems: 'center', gap: '20px' }}>
         <div style={{ fontSize: '2rem', fontWeight: '900', color: '#f59e0b', textAlign: 'center' }}>
-          {isMobileController ? 'تحكم سين جيم' : 'سين جيم - سينما أبو سعيد الكبرى'}
+          {isMobileController ? 'تحكم سين جيم' : 'سين جيم - مسابقة المعلومات العامة الكبرى'}
         </div>
         <div style={{ fontSize: '1.2rem', color: '#fff' }}>جاري الاتصال بخادم اللعبة...</div>
         <div className="spinner" style={{
@@ -475,7 +494,7 @@ function App() {
   const renderLobby = () => {
     // Detect if running on localhost and fallback to local LAN IP for mobile scanning
     const hostIp = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? '192.168.100.157' 
+      ? '192.168.100.66' 
       : window.location.hostname;
     
     const joinUrl = `${window.location.protocol}//${hostIp}:${window.location.port}/?room=${gameState.roomId}&join=true`;
@@ -486,7 +505,7 @@ function App() {
     const canStart = t1Connected && t2Connected;
 
     const handleStart = () => {
-      socket.emit('start_game', { roomId: gameState.roomId });
+      socket.emit('start_game', { roomId: gameState.roomId, categories: selectedCategoryIds });
     };
 
     return (
@@ -514,7 +533,7 @@ function App() {
         {/* Right Side: Team Setup */}
         <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '40px', gap: '30px', height: '80%', justifyContent: 'space-between' }}>
           <div>
-            <h1 className="title-main" style={{ textAlign: 'center', marginBottom: '20px' }}>تحدي سين جيم - أبو سعيد</h1>
+            <h1 className="title-main" style={{ textAlign: 'center', marginBottom: '20px' }}>تحدي سين جيم - مسابقة المعلومات العامة</h1>
             <p style={{ textAlign: 'center', color: '#fff', fontSize: '1.2rem', marginBottom: '30px', fontWeight: 'bold' }}>
               بانتظار قادة الفرق للدخول إلى الحلبة! 🍊
             </p>
@@ -583,18 +602,33 @@ function App() {
             </div>
           </div>
 
-          <button
-            onClick={handleStart}
-            disabled={!canStart}
-            style={{
-              padding: '18px', borderRadius: '14px', fontSize: '1.7rem', fontWeight: '900', cursor: canStart ? 'pointer' : 'not-allowed',
-              background: canStart ? 'linear-gradient(90deg, #ff6b00, #ff8533)' : '#27272a',
-              color: canStart ? '#ffffff' : '#71717a', border: 'none', transition: 'all 0.3s',
-              boxShadow: canStart ? '0 8px 25px rgba(255, 107, 0, 0.5)' : 'none'
-            }}
-          >
-            {canStart ? 'انطلق! ابدأ اللعب 🚀' : 'بانتظار قادة الفرق...'}
-          </button>
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <button
+              onClick={() => setHasConfirmedCategories(false)}
+              style={{
+                flex: 1, height: '60px', borderRadius: '14px', fontSize: '1.25rem', fontWeight: 'bold',
+                background: 'rgba(255, 255, 255, 0.06)', color: '#ffffff', border: '1.5px solid rgba(255, 107, 0, 0.4)',
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s',
+                boxSizing: 'border-box'
+              }}
+            >
+              ↩️ تغيير التصنيفات
+            </button>
+
+            <button
+              onClick={handleStart}
+              disabled={!canStart}
+              style={{
+                flex: 1.5, height: '60px', borderRadius: '14px', fontSize: '1.4rem', fontWeight: '900', cursor: canStart ? 'pointer' : 'not-allowed',
+                background: canStart ? 'linear-gradient(90deg, #ff6b00, #ff8533)' : '#27272a',
+                color: canStart ? '#ffffff' : '#71717a', border: 'none', transition: 'all 0.3s',
+                boxShadow: canStart ? '0 8px 25px rgba(255, 107, 0, 0.5)' : 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box'
+              }}
+            >
+              {canStart ? 'انطلق! ابدأ اللعب 🚀' : 'بانتظار قادة الفرق...'}
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -941,6 +975,56 @@ function App() {
     }
   };
 
+  const handleSignOut = () => {
+    localStorage.removeItem('seen_jeem_user');
+    setCurrentUser(null);
+    setIsViewingSavedGames(false);
+    setIsGuestMode(false);
+  };
+
+  // Show Auth Landing Screen FIRST for Host if not logged in & not guest
+  if (!isMobileController && !currentUser && !isGuestMode) {
+    return (
+      <AuthScreen
+        onLoginSuccess={(user) => setCurrentUser(user)}
+        onContinueAsGuest={() => setIsGuestMode(true)}
+      />
+    );
+  }
+
+  // Show Saved Games Screen if Host clicked "ألعابي"
+  if (!isMobileController && isViewingSavedGames) {
+    return (
+      <SavedGamesScreen
+        currentUser={currentUser}
+        onSelectGameToPlay={(catIds) => {
+          setSelectedCategoryIds(catIds);
+          setHasConfirmedCategories(true);
+          setIsViewingSavedGames(false);
+        }}
+        onBackToCategories={() => setIsViewingSavedGames(false)}
+        onOpenLogin={() => setIsAuthModalOpen(true)}
+        onSignOut={handleSignOut}
+      />
+    );
+  }
+
+  // Show Category Picker Screen SECOND after Sign In / Guest entry
+  if (!isMobileController && !hasConfirmedCategories) {
+    return (
+      <CategoryPickerScreen
+        currentUser={currentUser}
+        hostName={currentUser?.name}
+        onOpenSavedGames={() => setIsViewingSavedGames(true)}
+        onSignOut={handleSignOut}
+        onConfirmCategories={(catIds) => {
+          setSelectedCategoryIds(catIds);
+          setHasConfirmedCategories(true);
+        }}
+      />
+    );
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', width: '100%' }}>
       <header className="glass-panel" style={{
@@ -948,33 +1032,72 @@ function App() {
         margin: '10px 10px 0 10px', borderRadius: '12px', borderBottom: '1px solid rgba(255,255,255,0.08)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-          <span style={{ fontSize: '1.6rem', fontWeight: '900', color: '#f59e0b' }}>س</span>
-          <span style={{ fontSize: '1.6rem', fontWeight: '900', color: '#3b82f6' }}>ج</span>
-          <span style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>- لعبة أبو سعيد الكبرى</span>
+          <span style={{ fontSize: '1.6rem', fontWeight: '900', color: '#ff6b00' }}>س</span>
+          <span style={{ fontSize: '1.6rem', fontWeight: '900', color: '#ffffff' }}>ج</span>
+          <span style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>- مسابقة المعلومات العامة الكبرى</span>
         </div>
 
-        {gameState.stage !== GameStage.LOBBY && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            <span style={{ color: '#a1a1aa' }}>كود الغرفة:</span>
-            <span style={{ fontWeight: 'bold', color: '#f59e0b', fontSize: '1.2rem', background: 'rgba(255,255,255,0.05)', padding: '3px 12px', borderRadius: '6px' }}>
-              {gameState.roomId}
-            </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          {currentUser ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255, 107, 0, 0.12)', padding: '6px 16px', borderRadius: '30px', border: '1px solid rgba(255, 107, 0, 0.4)' }}>
+              <span style={{ fontSize: '1.1rem' }}>👤</span>
+              <span style={{ fontWeight: 'bold', color: '#ffffff' }}>{currentUser.name}</span>
+              <button
+                onClick={() => {
+                  localStorage.removeItem('seen_jeem_user');
+                  setCurrentUser(null);
+                }}
+                style={{
+                  background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer',
+                  fontSize: '0.85rem', fontWeight: 'bold', marginRight: '6px'
+                }}
+              >
+                (خروج)
+              </button>
+            </div>
+          ) : (
             <button
-              onClick={() => socket.emit('end_game_manually', { roomId: gameState.roomId })}
+              onClick={() => setIsAuthModalOpen(true)}
               style={{
-                background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)',
-                padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem'
+                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 18px', borderRadius: '30px',
+                border: '1px solid #ff6b00', background: 'rgba(255, 107, 0, 0.15)', color: '#ffffff',
+                fontWeight: 'bold', fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 107, 0, 0.2)'
               }}
             >
-              إنهاء اللعبة مبكراً 🛑
+              <span>👤</span>
+              <span>تسجيل الدخول / حساب جديد</span>
             </button>
-          </div>
-        )}
+          )}
+
+          {gameState.stage !== GameStage.LOBBY && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <span style={{ color: '#a1a1aa' }}>كود الغرفة:</span>
+              <span style={{ fontWeight: 'bold', color: '#f59e0b', fontSize: '1.2rem', background: 'rgba(255,255,255,0.05)', padding: '3px 12px', borderRadius: '6px' }}>
+                {gameState.roomId}
+              </span>
+              <button
+                onClick={() => socket.emit('end_game_manually', { roomId: gameState.roomId })}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)',
+                  padding: '5px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.9rem'
+                }}
+              >
+                إنهاء اللعبة مبكراً 🛑
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
       <main style={{ display: 'flex', flex: 1, flexDirection: 'column' }}>
         {renderStage()}
       </main>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={(user) => setCurrentUser(user)}
+      />
     </div>
   );
 }

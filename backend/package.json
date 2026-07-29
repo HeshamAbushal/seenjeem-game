@@ -9,8 +9,11 @@
     "dev": "ts-node src/index.ts"
   },
   "dependencies": {
+    "@prisma/client": "^7.9.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.3",
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
