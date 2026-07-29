@@ -602,33 +602,20 @@ function App() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '15px' }}>
-            <button
-              onClick={() => setHasConfirmedCategories(false)}
-              style={{
-                flex: 1, height: '60px', borderRadius: '14px', fontSize: '1.25rem', fontWeight: 'bold',
-                background: 'rgba(255, 255, 255, 0.06)', color: '#ffffff', border: '1.5px solid rgba(255, 107, 0, 0.4)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s',
-                boxSizing: 'border-box'
-              }}
-            >
-              ↩️ تغيير التصنيفات
-            </button>
-
-            <button
-              onClick={handleStart}
-              disabled={!canStart}
-              style={{
-                flex: 1.5, height: '60px', borderRadius: '14px', fontSize: '1.4rem', fontWeight: '900', cursor: canStart ? 'pointer' : 'not-allowed',
-                background: canStart ? 'linear-gradient(90deg, #ff6b00, #ff8533)' : '#27272a',
-                color: canStart ? '#ffffff' : '#71717a', border: 'none', transition: 'all 0.3s',
-                boxShadow: canStart ? '0 8px 25px rgba(255, 107, 0, 0.5)' : 'none',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box'
-              }}
-            >
-              {canStart ? 'انطلق! ابدأ اللعب 🚀' : 'بانتظار قادة الفرق...'}
-            </button>
-          </div>
+          <button
+            onClick={handleStart}
+            disabled={!canStart}
+            style={{
+              width: '100%', height: '60px', borderRadius: '14px', fontSize: '1.45rem', fontWeight: '900',
+              cursor: canStart ? 'pointer' : 'not-allowed',
+              background: canStart ? 'linear-gradient(90deg, #ff6b00, #ff8533)' : '#27272a',
+              color: canStart ? '#ffffff' : '#71717a', border: 'none', transition: 'all 0.3s',
+              boxShadow: canStart ? '0 8px 25px rgba(255, 107, 0, 0.5)' : 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box'
+            }}
+          >
+            {canStart ? 'انطلق! ابدأ اللعب 🚀' : 'بانتظار قادة الفرق...'}
+          </button>
         </div>
       </div>
     );
@@ -1037,31 +1024,79 @@ function App() {
           <span style={{ fontSize: '1.4rem', fontWeight: 'bold' }}>- مسابقة المعلومات العامة الكبرى</span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Change Categories button next to Logout button on Lobby screen */}
+          {gameState.stage === GameStage.LOBBY && (
+            <button
+              onClick={() => setHasConfirmedCategories(false)}
+              style={{
+                height: '48px',
+                padding: '0 20px',
+                borderRadius: '14px',
+                border: '1.5px solid rgba(255, 107, 0, 0.4)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                color: '#ffffff',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxSizing: 'border-box'
+              }}
+            >
+              ↩️ تغيير التصنيفات
+            </button>
+          )}
+
           {currentUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(255, 107, 0, 0.12)', padding: '6px 16px', borderRadius: '30px', border: '1px solid rgba(255, 107, 0, 0.4)' }}>
-              <span style={{ fontSize: '1.1rem' }}>👤</span>
-              <span style={{ fontWeight: 'bold', color: '#ffffff' }}>{currentUser.name}</span>
+            <div style={{
+              height: '48px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: 'rgba(255, 107, 0, 0.12)',
+              padding: '0 18px',
+              borderRadius: '14px',
+              border: '1px solid rgba(255, 107, 0, 0.4)',
+              boxSizing: 'border-box'
+            }}>
+              <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>👤 {currentUser.name}</span>
               <button
-                onClick={() => {
-                  localStorage.removeItem('seen_jeem_user');
-                  setCurrentUser(null);
-                }}
+                onClick={handleSignOut}
                 style={{
-                  background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer',
-                  fontSize: '0.85rem', fontWeight: 'bold', marginRight: '6px'
+                  background: 'rgba(239, 68, 68, 0.18)',
+                  border: '1px solid #ef4444',
+                  color: '#ef4444',
+                  padding: '5px 12px',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold'
                 }}
               >
-                (خروج)
+                تسجيل الخروج 🚪
               </button>
             </div>
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
               style={{
-                display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 18px', borderRadius: '30px',
-                border: '1px solid #ff6b00', background: 'rgba(255, 107, 0, 0.15)', color: '#ffffff',
-                fontWeight: 'bold', fontSize: '0.95rem', cursor: 'pointer', boxShadow: '0 4px 15px rgba(255, 107, 0, 0.2)'
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '0 20px',
+                borderRadius: '14px',
+                border: '1px solid #ff6b00',
+                background: 'rgba(255, 107, 0, 0.15)',
+                color: '#ffffff',
+                fontWeight: 'bold',
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(255, 107, 0, 0.2)',
+                boxSizing: 'border-box'
               }}
             >
               <span>👤</span>
