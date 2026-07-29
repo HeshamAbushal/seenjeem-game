@@ -93,46 +93,70 @@ export const SavedGamesScreen: React.FC<SavedGamesScreenProps> = ({
     }}>
       {/* Top Header Navigation */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        {/* Right side: Page Title */}
+        <div>
+          <h1 style={{ fontSize: '2.2rem', fontWeight: '900', color: '#ff6b00', margin: 0 }}>
+            🎮 ألعابي المحفوظة
+          </h1>
+          <p style={{ color: '#a1a1aa', fontSize: '1.05rem', marginTop: '4px' }}>
+            {currentUser ? `قائمة الألعاب السابقة للحساب: ${currentUser.name}` : 'سجل ألعابك السابقة ومسابقاتك المفضلة'}
+          </p>
+        </div>
+
+        {/* Left side: Return Button & Logout Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <button
             onClick={onBackToCategories}
             style={{
-              padding: '10px 18px',
-              borderRadius: '12px',
-              border: '1px solid rgba(255,255,255,0.2)',
-              background: 'rgba(255,255,255,0.06)',
+              height: '48px',
+              padding: '0 20px',
+              borderRadius: '14px',
+              border: '1.5px solid rgba(255, 255, 255, 0.2)',
+              background: 'rgba(255, 255, 255, 0.06)',
               color: '#ffffff',
               fontWeight: 'bold',
               cursor: 'pointer',
-              fontSize: '1rem'
+              fontSize: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxSizing: 'border-box'
             }}
           >
             ↩️ العودة للتصنيفات
           </button>
-          <div>
-            <h1 style={{ fontSize: '2.2rem', fontWeight: '900', color: '#ff6b00', margin: 0 }}>
-              🎮 ألعابي المحفوظة
-            </h1>
-            <p style={{ color: '#a1a1aa', fontSize: '1.05rem', marginTop: '4px' }}>
-              {currentUser ? `قائمة الألعاب السابقة للحساب: ${currentUser.name}` : 'سجل ألعابك السابقة ومسابقاتك المفضلة'}
-            </p>
-          </div>
-        </div>
 
-        {currentUser && onSignOut && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(255, 107, 0, 0.12)', padding: '6px 16px', borderRadius: '30px', border: '1px solid rgba(255, 107, 0, 0.4)' }}>
-            <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>👤 {currentUser.name}</span>
-            <button
-              onClick={onSignOut}
-              style={{
-                background: 'rgba(239, 68, 68, 0.15)', border: '1px solid #ef4444', color: '#ef4444',
-                padding: '4px 12px', borderRadius: '20px', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 'bold'
-              }}
-            >
-              تسجيل الخروج 🚪
-            </button>
-          </div>
-        )}
+          {currentUser && onSignOut && (
+            <div style={{
+              height: '48px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              background: 'rgba(255, 107, 0, 0.12)',
+              padding: '0 18px',
+              borderRadius: '14px',
+              border: '1px solid rgba(255, 107, 0, 0.4)',
+              boxSizing: 'border-box'
+            }}>
+              <span style={{ fontWeight: 'bold', fontSize: '0.95rem' }}>👤 {currentUser.name}</span>
+              <button
+                onClick={onSignOut}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.18)',
+                  border: '1px solid #ef4444',
+                  color: '#ef4444',
+                  padding: '5px 12px',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: 'bold'
+                }}
+              >
+                تسجيل الخروج 🚪
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Guest Warning */}
