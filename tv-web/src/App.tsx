@@ -594,28 +594,12 @@ function App() {
                 background: t1Connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)',
                 border: `1.5px solid ${t1Connected ? '#10b981' : 'rgba(255, 107, 0, 0.3)'}`
               }}>
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginLeft: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1.2rem' }}>✏️</span>
-                    <input
-                      type="text"
-                      value={gameState.teams.team_1.name}
-                      onChange={(e) => socket.emit('update_team_name', { roomId: gameState.roomId, teamId: 'team_1', teamName: e.target.value })}
-                      placeholder="اسم الفريق الأول"
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: '1.5px dashed #ff6b00',
-                        color: '#ff6b00',
-                        fontSize: '1.4rem',
-                        fontWeight: 'bold',
-                        outline: 'none',
-                        width: '100%'
-                      }}
-                    />
-                  </div>
-                  <span style={{ color: t1Connected ? '#10b981' : '#ef4444', fontSize: '0.9rem', fontWeight: 'bold', marginTop: '4px' }}>
-                    {t1Connected ? 'قائد الفريق متصل ✓' : 'بانتظار انضمام قائد الفريق... (انقر لتعديل الاسم)'}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff6b00' }}>
+                    {gameState.teams.team_1.name}
+                  </span>
+                  <span style={{ color: t1Connected ? '#10b981' : '#ef4444', fontSize: '0.95rem', fontWeight: 'bold', marginTop: '4px' }}>
+                    {t1Connected ? 'قائد الفريق متصل ✓' : 'بانتظار مسح الباركود وانضمام قائد الفريق... 📱'}
                   </span>
                 </div>
                 <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t1Connected ? '#10b981' : '#ef4444', boxShadow: t1Connected ? '0 0 10px #10b981' : 'none' }}></div>
@@ -627,28 +611,12 @@ function App() {
                 background: t2Connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)',
                 border: `1.5px solid ${t2Connected ? '#10b981' : 'rgba(255, 107, 0, 0.3)'}`
               }}>
-                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginLeft: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1.2rem' }}>✏️</span>
-                    <input
-                      type="text"
-                      value={gameState.teams.team_2.name}
-                      onChange={(e) => socket.emit('update_team_name', { roomId: gameState.roomId, teamId: 'team_2', teamName: e.target.value })}
-                      placeholder="اسم الفريق الثاني"
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        borderBottom: '1.5px dashed #3b82f6',
-                        color: '#3b82f6',
-                        fontSize: '1.4rem',
-                        fontWeight: 'bold',
-                        outline: 'none',
-                        width: '100%'
-                      }}
-                    />
-                  </div>
-                  <span style={{ color: t2Connected ? '#10b981' : '#ef4444', fontSize: '0.9rem', fontWeight: 'bold', marginTop: '4px' }}>
-                    {t2Connected ? 'قائد الفريق متصل ✓' : 'بانتظار انضمام قائد الفريق... (انقر لتعديل الاسم)'}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#3b82f6' }}>
+                    {gameState.teams.team_2.name}
+                  </span>
+                  <span style={{ color: t2Connected ? '#10b981' : '#ef4444', fontSize: '0.95rem', fontWeight: 'bold', marginTop: '4px' }}>
+                    {t2Connected ? 'قائد الفريق متصل ✓' : 'بانتظار مسح الباركود وانضمام قائد الفريق... 📱'}
                   </span>
                 </div>
                 <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t2Connected ? '#10b981' : '#ef4444', boxShadow: t2Connected ? '0 0 10px #10b981' : 'none' }}></div>
