@@ -106,8 +106,8 @@ export function createInitialState(roomId: string, categoryIds?: string[]): Game
     gameMode: 'MULTIPLE_CHOICE',
     stage: GameStage.LOBBY,
     teams: {
-      team_1: { id: 'team_1', name: 'شقردية التحدي', leaderSocketId: null, score: 0 },
-      team_2: { id: 'team_2', name: 'سناعيس الكرو', leaderSocketId: null, score: 0 }
+      team_1: { id: 'team_1', name: 'الفريق الأول', leaderSocketId: null, score: 0 },
+      team_2: { id: 'team_2', name: 'الفريق الثاني', leaderSocketId: null, score: 0 }
     },
     categories: categoryNames,
     questions,
