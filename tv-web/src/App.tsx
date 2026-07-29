@@ -273,14 +273,48 @@ function App() {
     // Mobile Stage: Lobby
     if (gameState.stage === GameStage.LOBBY) {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', padding: '30px', justifyContent: 'center', alignItems: 'center', gap: '20px', direction: 'rtl' }}>
-          <span style={{ fontSize: '4rem' }}>✓</span>
-          <h1 style={{ fontSize: '2rem', color: '#10b981', fontWeight: '900' }}>تم الانضمام بنجاح!</h1>
-          <p style={{ fontSize: '1.2rem', color: '#fff', textAlign: 'center' }}>
-            أنت الآن قائد: <strong style={{ color: '#f59e0b' }}>{myTeamName}</strong>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', padding: '30px', justifyContent: 'center', alignItems: 'center', gap: '20px', direction: 'rtl', background: 'radial-gradient(circle at 50% 20%, #1f1642 0%, #0d0a1b 100%)' }}>
+          <span style={{ fontSize: '4rem' }}>🎉</span>
+          <h1 style={{ fontSize: '2rem', color: '#10b981', fontWeight: '900', margin: 0 }}>تم الانضمام بنجاح!</h1>
+          <p style={{ color: '#a1a1aa', fontSize: '1.1rem', margin: 0 }}>
+            أنت الآن قائد: <strong style={{ color: '#ff6b00' }}>{myTeamName}</strong>
           </p>
-          <div className="glass-panel" style={{ padding: '20px', textAlign: 'center', width: '100%' }}>
-            بانتظار بدء اللعبة من شاشة التلفاز الرئيسية...
+
+          {/* Team Name Customizer right after QR code scan */}
+          <div className="glass-panel" style={{ padding: '24px', textAlign: 'center', width: '100%', display: 'flex', flexDirection: 'column', gap: '12px', border: '1.5px solid #ff6b00', borderRadius: '20px' }}>
+            <label style={{ color: '#ff6b00', fontWeight: '900', fontSize: '1.1rem' }}>
+              تغيير اسم فريقك ✏️:
+            </label>
+            <input
+              type="text"
+              value={gameState.teams[joinedTeamId].name}
+              onChange={(e) => {
+                socket.emit('update_team_name', {
+                  roomId: gameState.roomId,
+                  teamId: joinedTeamId,
+                  teamName: e.target.value
+                });
+              }}
+              placeholder="اكتب اسم فريقك هنا"
+              style={{
+                width: '100%',
+                padding: '16px',
+                borderRadius: '14px',
+                border: '1.5px solid #ff6b00',
+                background: 'rgba(255, 107, 0, 0.15)',
+                color: '#ffffff',
+                fontSize: '1.3rem',
+                fontWeight: '900',
+                textAlign: 'center',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
+            />
+            <span style={{ fontSize: '0.85rem', color: '#a1a1aa' }}>يتم تحديث الاسم مباشرة على شاشة التلفاز والمنافسين 📺</span>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '20px', textAlign: 'center', width: '100%', borderRadius: '16px' }}>
+            ⏳ بانتظار بدء الجولة من شاشة التلفاز الرئيسية...
           </div>
         </div>
       );
