@@ -16,15 +16,11 @@ export const CategoryPickerScreen: React.FC<CategoryPickerScreenProps> = ({
   currentUser,
   hostName
 }) => {
-  // Default to selecting the first 6 categories for a standard 6-column board
-  const [selectedIds, setSelectedIds] = useState<string[]>(
-    GENERAL_CATEGORIES.slice(0, 6).map((c) => c.id)
-  );
+  // Start with no default selections
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const toggleCategory = (id: string) => {
     if (selectedIds.includes(id)) {
-      // Don't allow unselecting below 1 category
-      if (selectedIds.length <= 1) return;
       setSelectedIds(selectedIds.filter((item) => item !== id));
     } else {
       // Maximum 6 categories per board round
@@ -207,16 +203,16 @@ export const CategoryPickerScreen: React.FC<CategoryPickerScreenProps> = ({
             padding: '18px 48px',
             borderRadius: '16px',
             border: 'none',
-            fontSize: '1.4rem',
+            fontSize: '1.35rem',
             fontWeight: '900',
-            background: 'linear-gradient(90deg, #ff6b00, #ff8533)',
-            color: '#ffffff',
-            cursor: 'pointer',
-            boxShadow: '0 8px 30px rgba(255, 107, 0, 0.5)',
+            background: selectedIds.length === 0 ? '#27272a' : 'linear-gradient(90deg, #ff6b00, #ff8533)',
+            color: selectedIds.length === 0 ? '#71717a' : '#ffffff',
+            cursor: selectedIds.length === 0 ? 'not-allowed' : 'pointer',
+            boxShadow: selectedIds.length === 0 ? 'none' : '0 8px 30px rgba(255, 107, 0, 0.5)',
             transition: 'all 0.2s'
           }}
         >
-          تأكيد التصنيفات وبدء اللعبة 🚀
+          {selectedIds.length === 0 ? 'اختر تصنيفاً واحداً على الأقل لبدء اللعبة 🎯' : 'تأكيد التصنيفات وبدء اللعبة 🚀'}
         </button>
       </div>
     </div>
