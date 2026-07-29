@@ -585,7 +585,7 @@ function App() {
                     boxShadow: (gameState.gameMode || 'MULTIPLE_CHOICE') === 'MULTIPLE_CHOICE' ? '0 0 15px rgba(255, 107, 0, 0.5)' : 'none'
                   }}
                 >
-                  📝 خيارات متعددة
+                  🔴 أبو ضغطة
                 </button>
                 <button
                   onClick={() => socket.emit('set_game_mode', { roomId: gameState.roomId, gameMode: 'OPEN_QUESTION' })}
