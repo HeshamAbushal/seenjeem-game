@@ -81,10 +81,19 @@ export function setupSockets(io: Server) {
     });
 
     // Start Game
-    socket.on('start_game', (data: { roomId: string }) => {
+    socket.on('start_game', (data: { roomId: string; categories?: string[] }) => {
       const state = rooms.get(data.roomId);
       if (state && state.stage === GameStage.LOBBY) {
-        state.stage = GameStage.BOARD;
+        if (data.categories && data.categories.length === 6) {
+          // Re-initialize room questions and categories with host selected categories
+          const updatedState = createInitialState(data.roomId, data.categories);
+          updatedState.teams = state.teams;
+          updatedState.gameMode = state.gameMode;
+          updatedState.stage = GameStage.BOARD;
+          rooms.set(data.roomId, updatedState);
+        } else {
+          state.stage = GameStage.BOARD;
+        }
         sendStateUpdate(data.roomId);
       }
     });
