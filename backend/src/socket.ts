@@ -48,8 +48,9 @@ export function setupSockets(io: Server) {
     });
 
     // Mobile controller joins the room as a leader
-    socket.on('join_room', (data: { roomId: string; teamId: 'team_1' | 'team_2' }) => {
-      const { roomId, teamId } = data;
+    // Mobile controller joins the room as a leader
+    socket.on('join_room', (data: { roomId: string; teamId: 'team_1' | 'team_2'; teamName?: string }) => {
+      const { roomId, teamId, teamName } = data;
       const state = rooms.get(roomId);
 
       if (!state) {
@@ -64,11 +65,24 @@ export function setupSockets(io: Server) {
 
       // Assign socket as leader
       state.teams[teamId].leaderSocketId = socket.id;
+      if (teamName && teamName.trim()) {
+        state.teams[teamId].name = teamName.trim();
+      }
       socket.join(roomId);
 
-      console.log(`Socket ${socket.id} joined room ${roomId} as leader for ${teamId}`);
+      console.log(`Socket ${socket.id} joined room ${roomId} as leader for ${teamId} with team name "${state.teams[teamId].name}"`);
       socket.emit('join_success', { teamId, state });
       sendStateUpdate(roomId);
+    });
+
+    // Host or Controller updates team name
+    socket.on('update_team_name', (data: { roomId: string; teamId: 'team_1' | 'team_2'; teamName: string }) => {
+      const { roomId, teamId, teamName } = data;
+      const state = rooms.get(roomId);
+      if (state && teamName && teamName.trim()) {
+        state.teams[teamId].name = teamName.trim();
+        sendStateUpdate(roomId);
+      }
     });
 
     // Set Game Mode (Lobby)

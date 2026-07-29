@@ -147,6 +147,8 @@ function App() {
     };
   }, []);
 
+  const [customTeamName, setCustomTeamName] = useState('');
+
   const handleJoinRoom = () => {
     if (!roomCodeInput.trim()) {
       setErrorMessage('الرجاء إدخال رمز الغرفة');
@@ -154,7 +156,8 @@ function App() {
     }
     socket.emit('join_room', {
       roomId: roomCodeInput.toUpperCase().trim(),
-      teamId: selectedTeam
+      teamId: selectedTeam,
+      teamName: customTeamName.trim()
     });
   };
 
@@ -204,29 +207,41 @@ function App() {
             </div>
 
             <div>
-              <label style={{ display: 'block', marginBottom: '8px', color: '#f59e0b', fontWeight: 'bold' }}>اختر فريقك:</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
+              <label style={{ display: 'block', marginBottom: '8px', color: '#ff6b00', fontWeight: 'bold' }}>اختر الفريق:</label>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
                 <button
                   onClick={() => setSelectedTeam('team_1')}
                   style={{
-                    flex: 1, padding: '14px', borderRadius: '10px', cursor: 'pointer',
-                    background: selectedTeam === 'team_1' ? '#2563eb' : 'rgba(255,255,255,0.05)',
-                    color: '#fff', fontWeight: 'bold', border: `1px solid ${selectedTeam === 'team_1' ? '#3b82f6' : 'transparent'}`
+                    flex: 1, padding: '14px', borderRadius: '12px', cursor: 'pointer',
+                    background: selectedTeam === 'team_1' ? '#ff6b00' : 'rgba(255,255,255,0.05)',
+                    color: '#fff', fontWeight: 'bold', border: `1.5px solid ${selectedTeam === 'team_1' ? '#ffffff' : 'transparent'}`
                   }}
                 >
-                  شقردية أبو سعيد
+                  الفريق الأول (1)
                 </button>
                 <button
                   onClick={() => setSelectedTeam('team_2')}
                   style={{
-                    flex: 1, padding: '14px', borderRadius: '10px', cursor: 'pointer',
-                    background: selectedTeam === 'team_2' ? '#d97706' : 'rgba(255,255,255,0.05)',
-                    color: '#fff', fontWeight: 'bold', border: `1px solid ${selectedTeam === 'team_2' ? '#f59e0b' : 'transparent'}`
+                    flex: 1, padding: '14px', borderRadius: '12px', cursor: 'pointer',
+                    background: selectedTeam === 'team_2' ? '#3b82f6' : 'rgba(255,255,255,0.05)',
+                    color: '#fff', fontWeight: 'bold', border: `1.5px solid ${selectedTeam === 'team_2' ? '#ffffff' : 'transparent'}`
                   }}
                 >
-                  سناعيس الكرو
+                  الفريق الثاني (2)
                 </button>
               </div>
+
+              <label style={{ display: 'block', marginBottom: '8px', color: '#ff6b00', fontWeight: 'bold' }}>اسم فريقك الخـاص ✍️:</label>
+              <input
+                type="text"
+                value={customTeamName}
+                onChange={(e) => setCustomTeamName(e.target.value)}
+                placeholder="اكتب اسم فريقك هنا (مثال: نشامى التحدي، فرسان المعرفة)"
+                style={{
+                  width: '100%', padding: '14px', borderRadius: '12px', border: '1.5px solid rgba(255,107,0,0.4)',
+                  background: 'rgba(255,255,255,0.06)', color: '#ffffff', fontSize: '1rem', outline: 'none', boxSizing: 'border-box'
+                }}
+              />
             </div>
 
             {errorMessage && (
@@ -545,10 +560,28 @@ function App() {
                 background: t1Connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)',
                 border: `1.5px solid ${t1Connected ? '#10b981' : 'rgba(255, 107, 0, 0.3)'}`
               }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ff6b00' }}>{gameState.teams.team_1.name}</span>
-                  <span style={{ color: t1Connected ? '#10b981' : '#ef4444', fontSize: '0.95rem', fontWeight: 'bold' }}>
-                    {t1Connected ? 'قائد الفريق متصل ✓' : 'بانتظار قائد الفريق...'}
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginLeft: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>✏️</span>
+                    <input
+                      type="text"
+                      value={gameState.teams.team_1.name}
+                      onChange={(e) => socket.emit('update_team_name', { roomId: gameState.roomId, teamId: 'team_1', teamName: e.target.value })}
+                      placeholder="اسم الفريق الأول"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: '1.5px dashed #ff6b00',
+                        color: '#ff6b00',
+                        fontSize: '1.4rem',
+                        fontWeight: 'bold',
+                        outline: 'none',
+                        width: '100%'
+                      }}
+                    />
+                  </div>
+                  <span style={{ color: t1Connected ? '#10b981' : '#ef4444', fontSize: '0.9rem', fontWeight: 'bold', marginTop: '4px' }}>
+                    {t1Connected ? 'قائد الفريق متصل ✓' : 'بانتظار انضمام قائد الفريق... (انقر لتعديل الاسم)'}
                   </span>
                 </div>
                 <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t1Connected ? '#10b981' : '#ef4444', boxShadow: t1Connected ? '0 0 10px #10b981' : 'none' }}></div>
@@ -560,10 +593,28 @@ function App() {
                 background: t2Connected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.03)',
                 border: `1.5px solid ${t2Connected ? '#10b981' : 'rgba(255, 107, 0, 0.3)'}`
               }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#ffffff' }}>{gameState.teams.team_2.name}</span>
-                  <span style={{ color: t2Connected ? '#10b981' : '#ef4444', fontSize: '0.95rem', fontWeight: 'bold' }}>
-                    {t2Connected ? 'قائد الفريق متصل ✓' : 'بانتظار قائد الفريق...'}
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, marginLeft: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.2rem' }}>✏️</span>
+                    <input
+                      type="text"
+                      value={gameState.teams.team_2.name}
+                      onChange={(e) => socket.emit('update_team_name', { roomId: gameState.roomId, teamId: 'team_2', teamName: e.target.value })}
+                      placeholder="اسم الفريق الثاني"
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        borderBottom: '1.5px dashed #3b82f6',
+                        color: '#3b82f6',
+                        fontSize: '1.4rem',
+                        fontWeight: 'bold',
+                        outline: 'none',
+                        width: '100%'
+                      }}
+                    />
+                  </div>
+                  <span style={{ color: t2Connected ? '#10b981' : '#ef4444', fontSize: '0.9rem', fontWeight: 'bold', marginTop: '4px' }}>
+                    {t2Connected ? 'قائد الفريق متصل ✓' : 'بانتظار انضمام قائد الفريق... (انقر لتعديل الاسم)'}
                   </span>
                 </div>
                 <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: t2Connected ? '#10b981' : '#ef4444', boxShadow: t2Connected ? '0 0 10px #10b981' : 'none' }}></div>
